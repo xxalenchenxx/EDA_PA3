@@ -98,7 +98,7 @@ Iowa State University Research Foundation, Inc.
     extern float siteOriginX, siteEndX, coreWidth;
     extern float siteWidth, siteSpacing, coreRowHeight;
     extern float *rowOriginX, *rowEndX;
-    extern float *xRowBlockage, *yRowBlockage, *widthRowBlockage;
+    extern float *xRowBlockage, *yRowBlockage, *widthRowBlockage,*siteSpacingRow;
     extern int numNodes;
 
 #endif /* _BOOKSHELF_IO_H_*/ 

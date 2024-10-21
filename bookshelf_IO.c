@@ -50,7 +50,7 @@ Iowa State University Research Foundation, Inc.
     float siteOriginX, siteEndX, coreWidth;
     float siteWidth, siteSpacing, coreRowHeight;
     float *rowOriginX, *rowEndX;
-    float *xRowBlockage, *yRowBlockage, *widthRowBlockage;
+    float *xRowBlockage, *yRowBlockage, *widthRowBlockage,*siteSpacingRow;
 
 /*-- global variables --*/
     typedef struct nodesHash NODES;
@@ -653,7 +653,7 @@ void readSclFile(char benchmarkPath[], char sclFile[])
     xRowBlockage = vector(1, 2*numRows);
     yRowBlockage = vector(1, 2*numRows);
     widthRowBlockage = vector(1, 2*numRows);
-
+    siteSpacingRow = vector(1, numRows);
     // any blanks or comments after numRows line
     do {
       currentPos = ftell(fp);
@@ -681,6 +681,7 @@ void readSclFile(char benchmarkPath[], char sclFile[])
       
         rowOriginX[row] = originX;
         rowEndX[row] = originX + totalSites*siteSpacing;
+        siteSpacingRow[row]=siteSpacing;
         if(rowOriginX[row] < siteOriginX) siteOriginX = rowOriginX[row];
         if(rowEndX[row] > siteEndX) siteEndX = rowEndX[row];
     }
