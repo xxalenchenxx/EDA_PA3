@@ -29,4 +29,4 @@ bookshelf_IO.o: bookshelf_IO.c bookshelf_IO.h
 
 # 清理物件檔和可執行檔
 clean:
-	rm -f *.o $(TARGET)
+	rm -f *.o $(TARGET) output.jpg

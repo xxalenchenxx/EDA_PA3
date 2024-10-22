@@ -1,10 +1,7 @@
-/* -----------  FastPlace - Version 1.0 ----------------
-                       by 
-   Natarajan Viswanathan and Chris C.-N. Chu
-     Dept. of ECpE, Iowa State University
-          Copyright (c) - 2004 
-Iowa State University Research Foundation, Inc.
--------------------------------------------------------- */
+/* -----------  PA3  ----------------
+    Chen-Yu-Chia
+    2024-10-22
+------------------------------------- */
 /* --------------------------------------------------------------------------
    Header file used in bookshelf_IO.c 
 ----------------------------------------------------------------------------*/
@@ -12,8 +9,8 @@ Iowa State University Research Foundation, Inc.
 #ifndef _BOOKSHELF_IO_H_
 #define _BOOKSHELF_IO_H_
 
-#define BUFFERSIZE 200
-#define STRINGLEN 30
+#define BUFFERSIZE 300
+#define STRINGLEN 40
 
     /* -----------------------------------------------------------------------------
         Reads the .nodes file and creates a hash linking cell name to cell index for 
@@ -54,7 +51,7 @@ Iowa State University Research Foundation, Inc.
         boundary based on the position of the I/O pads
   
         creates extern vars:
-            xCellCoord[], yCellCoord[], minX, maxX, minY, maxY
+            xCellCoord[], yCellCoord[]
     -------------------------------------------------------------------------------- */
     extern void readPlFile(char benchmarkPath[], char plFile[]);
     
@@ -76,6 +73,16 @@ Iowa State University Research Foundation, Inc.
         print out a bookshelf format .pl file to show in python
     -------------------------------------------------------------------------------- */
     extern void write_python_File(float *xCellCoord,float *yCellCoord);
+
+
+    /* -----------------------------------------------------------------------------
+        output results into output directory
+    -------------------------------------------------------------------------------- */
+    extern void clear_output_dir(char outputDir[]);
+    extern void write_aux_File(char outputDir[], char benchmarkName[]);
+
+    //write_other_File: ".nodes", ".nets", ".wts",  ".scl"
+    extern void write_other_File(char inputDir[], char outputDir[], char benchmarkName[]);
     /*--------------  Extern Variables  ------------------*/
 
     extern char **cellName;
@@ -102,43 +109,3 @@ Iowa State University Research Foundation, Inc.
     extern int numNodes;
 
 #endif /* _BOOKSHELF_IO_H_*/ 
-
-/* -----------------------------------------------------------------------------------------------
-                                Description of Extern Variables
-
-    cellName[i]         =   cell name corresponding to cell index "i" 
-                            (i = 1..movableNodes+numTerminals)
-
-    movableNodes        =   number of movable nodes,
-    numTerminals        =   number of fixed nodes (I/O Pads + Fixed Macros)
-    averageCellWidth    =   avg width of movable nodes,
-    cellWidth[i]        =   width of cell "i"   (i = 1..movableNodes+numTerminals)
-    cellHeight[i]       =   height of cell "i"  (i = 1..movableNodes+numTerminals)
-
-    numNets             =   number of nets
-    numPins             =   number of pins
-    netlist[]           =   netlist of the circuit
-    xPinOffset[]        =   x-offset of the pins from the center of the cell
-    yPinOffset[]        =   y-offset (      "       )
-    netlistIndex[]      =   index to the netlist and offset vectors
-
-    xCellCoord[i]       =   x-coordinate of cell "i"  (i = 1..movableNodes+numTerminals)
-    yCellCoord[i]       =   y-coordinate of cell "i", 
-    minX, maxX          =   left and right boundaries of the chip (Note: not the placement region) 
-    minY, maxY          =   bottom and top boundaries of the chip
-    areaArrayIO[]       =   All fixed terminals with which there can be an overlap of movable nodes
-                            (eg area array IOs)
-    numAreaArrayIO      =   the total number of area array IOs
-
-    siteOriginX[]       =   left boundary of the placement region within a row
-    siteEndX[]          =   right boundary of the placement region within a row   
-    siteOriginY         =   bottom boundary of the placement region    
-    siteEndY            =   top boundary of the placement region   
-    siteWidth           =   width of a placement site within a row 
-    siteSpacing         =   the space b/w adjacent placement sites within a row 
-    numRows             =   number of placement rows 
-    coreRowHeight       =   row Height 
-    coreWidth           =   siteEndX - siteOriginX 
-    coreHeight          =   siteEndY - siteOriginY 
-
----------------------------------------------------------------------------------------------------*/

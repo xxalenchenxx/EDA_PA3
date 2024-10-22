@@ -1,10 +1,7 @@
-/* -----------  FastPlace - Version 1.0 ----------------
-                       by 
-   Natarajan Viswanathan and Chris C.-N. Chu
-     Dept. of ECpE, Iowa State University
-          Copyright (c) - 2004 
-Iowa State University Research Foundation, Inc.
---------------------------------------------------------*/
+/* -----------  PA3  ----------------
+    Chen-Yu-Chia
+    2024-10-22
+------------------------------------- */
 /* --------------------------------------------------------------------------
    Contains routines to:
    - Read and Write the benchmark files in Bookshelf format 
@@ -14,7 +11,8 @@ Iowa State University Research Foundation, Inc.
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-
+#include <dirent.h>  
+#include <unistd.h>  
 #include "memAlloc.h"
 #include "bookshelf_IO.h"
 
@@ -748,14 +746,13 @@ void writePlFile(char outputDir[], char benchmarkName[], float xCoord[], float y
         printf("ERROR in opening the %s file for write \n", tempStr);
         exit(1);
     }
-    printf("\nPrinting %s File\n", tempStr);
+    // printf("\nPrinting %s File\n", tempStr);
 
-    fprintf(fp, "UCLA pl 1.0\n");
-    fprintf(fp, "# Circuit  :  %s\n", benchmarkName);
+    fprintf(fp, "UCLA pl 1.0\n\n");
 
     for(i=1; i<=numNodes; i++)
-        fprintf(fp, "    %20s    %-10.2f    %-10.2f  :  N\n", 
-                cellName[i], xCoord[i]-0.5*cellWidth[i], yCoord[i]-0.5*cellHeight[i]);
+        fprintf(fp, "%s %0.2f %0.2f : %s\n", 
+                cellName[i], xCoord[i], yCoord[i],cell_fixedType[i]);
    
     fclose(fp);
 }
@@ -792,3 +789,120 @@ void write_python_File(float *xCellCoord,float *yCellCoord) {
     // }
 }
 
+void clear_output_dir(char outputDir[]){
+    DIR *dir = opendir(outputDir);
+    if (dir == NULL) {
+        perror("無法打開目錄");
+        return ;
+    }
+    struct dirent *entry;
+    char filePath[1024];  // 用於存儲每個檔案的完整路徑
+
+    // 遍歷目錄中的每個項目
+    while ((entry = readdir(dir)) != NULL) {
+        // 跳過 "." 和 ".."
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+        
+        strcpy(filePath, outputDir);
+        strcat(filePath, "/");
+        strcat(filePath, entry->d_name);
+        // 組合完整的檔案路徑
+        // snprintf(filePath, sizeof(filePath), "%s%s", filePath, entry->d_name);
+
+        // 刪除檔案
+        if (remove(filePath)==0) {
+            // printf("delte file: %s\n", filePath);
+        } else {
+            perror("cannot delete file\n");
+        }
+    }
+
+    // 關閉目錄
+    closedir(dir);
+}
+
+
+void write_aux_File(char outputDir[], char benchmarkName[]) {
+    FILE *fp;
+    char tempStr[BUFFERSIZE];
+    char tempfile[BUFFERSIZE];
+
+    // 文件的後綴名稱
+    const char *fileSuffixes[] = { "_out.nodes", "_out.nets", "_out.wts", "_out.pl", "_out.scl" };
+    int numFiles = sizeof(fileSuffixes) / sizeof(fileSuffixes[0]);  // 計算後綴數量
+
+    // 組合目標文件的路徑與名稱
+    snprintf(tempStr, sizeof(tempStr), "%s/%s_out.aux", outputDir, benchmarkName);
+
+    // 打開文件
+    if ((fp = fopen(tempStr, "w")) == NULL) {
+        printf("ERROR in opening the %s file for write \n", tempStr);
+        exit(1);
+    }
+    // printf("\nPrinting %s File\n", tempStr);
+
+    
+    fprintf(fp, "RowBasedPlacement : ");
+
+    // 使用迴圈依次寫入檔案名稱
+    for (int i = 0; i < numFiles; i++) {
+        // 組合 benchmarkName 和後綴
+        snprintf(tempfile, sizeof(tempfile), "%s%s", benchmarkName, fileSuffixes[i]);
+
+        // 寫入檔案名稱，最後一個名稱後不加空格
+        fprintf(fp, "%s", tempfile);
+        if (i < numFiles - 1) {
+            fprintf(fp, " ");  // 非最後一個檔案名稱後加空格
+        }
+    }
+
+    fclose(fp);
+}
+
+
+void write_other_File(char inputDir[], char outputDir[], char benchmarkName[]) {
+    FILE *input_fp, *output_fp;
+    char inputFilePath[BUFFERSIZE];
+    char outputFilePath[BUFFERSIZE];
+    char buffer[BUFFERSIZE];
+    size_t bytesRead;
+
+    // 定義輸入檔案和輸出檔案的後綴
+    const char *input_fileSuffixes[4] = { ".nodes", ".nets", ".wts",  ".scl" };
+    const char *output_fileSuffixes[4] = { "_out.nodes", "_out.nets", "_out.wts", "_out.scl" };
+    int numFiles = sizeof(input_fileSuffixes) / sizeof(input_fileSuffixes[0]); 
+
+    // 迴圈處理每個檔案
+    for (int i = 0; i < numFiles; i++) {
+        snprintf(inputFilePath, sizeof(inputFilePath), "%s/%s%s", inputDir, benchmarkName, input_fileSuffixes[i]);
+        snprintf(outputFilePath, sizeof(outputFilePath), "%s/%s%s", outputDir, benchmarkName, output_fileSuffixes[i]);
+
+        input_fp = fopen(inputFilePath, "rb");
+        if (input_fp == NULL) {
+            perror("cannot open input file\n");
+            exit(1);
+        }
+
+
+        output_fp = fopen(outputFilePath, "wb");  
+        if (output_fp == NULL) {
+            perror("cannot open output file\n");
+            fclose(input_fp);
+            exit(1);
+        }
+
+        //因為我尚未更動其他檔案的的資訊，所以直接複製
+        while ((bytesRead = fread(buffer, 1, sizeof(buffer), input_fp)) > 0) {
+            fwrite(buffer, 1, bytesRead, output_fp);
+        }
+
+        
+        fclose(input_fp);
+        fclose(output_fp);
+
+        // 顯示已完成的檔案
+        // printf("已複製檔案: %s -> %s\n", inputFilePath, outputFilePath);
+    }
+}

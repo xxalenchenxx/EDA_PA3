@@ -1,22 +1,23 @@
 #include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
+// #include <stdio.h>
+// #include <stdlib.h>
 #include <map>
 #include <cmath>
 #include <ctime>
-#include <vector> 
+#include <vector>
+#include <chrono> 
 #include <limits>
 #include <cstdlib>
 #include <iostream>
 #include <algorithm>        
 #include "bookshelf_IO.h"
-#include "memAlloc.h"
 
 struct Rect {
     float xStart, xEnd;
     float yStart, yEnd;
     int index; 
 };
+
 
 
 float clamp(float val, float minVal, float maxVal) {
@@ -68,8 +69,8 @@ void check_overlap(std::vector<float> xCellCoord_p,std::vector<float> yCellCoord
         }
     }
 
-    if (!hasOverlap) {
-        std::cout << "[CORRECT]No overlaps" << std::endl;
+    if (hasOverlap) {
+        std::cout << "[ERROR]have overlaps" << std::endl;
     }
     return;
 }
@@ -110,8 +111,8 @@ void check_on_site(std::vector<float> xCellCoord_p,std::vector<float> yCellCoord
             break;
         }
     }
-    if (!has_non_site) {
-        std::cout << "[CORRECT] All positions are on site grid" << std::endl;
+    if (has_non_site) {
+        std::cout << "[ERROR]positions are not on site grid" << std::endl;
     }
 
 }
@@ -175,6 +176,7 @@ void simulatedAnnealing(std::vector<float> &xCellCoord_p, std::vector<float> &yC
     float T_min = 1e-1f; // minimal T
     float alpha = 0.997f; // coe
     int maxIterations = 2048; // max iteration
+    double runtime_limit=10.0;
 
     // 构建宽度到cell索引的映射
     std::map<float, std::vector<int>> widthToCells;
@@ -188,13 +190,15 @@ void simulatedAnnealing(std::vector<float> &xCellCoord_p, std::vector<float> &yC
 
     float currentTotalCost, currentMaxCost;
     calculateDisplacement(currentX, currentY, numNodes, currentTotalCost);
-    float historyTotalCost=1e10;
+    float historyTotalCost=currentTotalCost;
     std::srand(static_cast<unsigned int>(std::time(nullptr))); // random
-
-
+    auto start = std::chrono::high_resolution_clock::now();
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
     //start SA
-    while (T > T_min) {
+    while (T > T_min && elapsed.count() < runtime_limit) {
         // std::cout<<"T:"<<T<<std::endl;
+        // std::cout<<"end: "<<elapsed.count()<<std::endl;
         for (int iter = 0; iter < maxIterations; ++iter) {
             
             auto it = widthToCells.begin();
@@ -252,7 +256,8 @@ void simulatedAnnealing(std::vector<float> &xCellCoord_p, std::vector<float> &yC
         // }else{
             T *= alpha;
         // }
-        
+        end = std::chrono::high_resolution_clock::now();
+        elapsed = end - start;
     }
 
 }
@@ -420,17 +425,17 @@ int main (int argc, char *argv[])
 
     float total_cost=0.0;
     float max_cost=0.0;
-    for(int i=1;i<xCellCoord_p.size();i++){
-        float ab_x=xCellCoord_p[i]-xCellCoord[i];
-        float ab_y=yCellCoord_p[i]-yCellCoord[i];
-        float cost= std::fabs(ab_x)+std::fabs(ab_y);
-        total_cost+=cost;
-        if(max_cost<cost){
-            max_cost=cost;
-        }
-    }
-    printf("[before]Total displacement: %.1f\n",total_cost);
-    printf("[before]Maximum displacement: %.1f\n",max_cost);
+    // for(int i=1;i<xCellCoord_p.size();i++){
+    //     float ab_x=xCellCoord_p[i]-xCellCoord[i];
+    //     float ab_y=yCellCoord_p[i]-yCellCoord[i];
+    //     float cost= std::fabs(ab_x)+std::fabs(ab_y);
+    //     total_cost+=cost;
+    //     if(max_cost<cost){
+    //         max_cost=cost;
+    //     }
+    // }
+    // printf("[before]Total displacement: %.1f\n",total_cost);
+    // printf("[before]Maximum displacement: %.1f\n",max_cost);
 
     /* -----------------------------------------------------------------------------
         simulated Annealing Algorithm 
@@ -458,13 +463,20 @@ int main (int argc, char *argv[])
             max_cost=cost;
         }
     }
-    printf("[after]Total displacement: %.1f\n",total_cost);
-    printf("[after]Maximum displacement: %.1f\n",max_cost);
+    printf("\n-------------result-------------\n");
+    printf("Total displacement: %.1f\n",total_cost);
+    printf("Maximum displacement: %.1f\n",max_cost);
 
     // check_overlap
     check_overlap(xCellCoord_p,yCellCoord_p);
     //檢查是否符合 site的座標
     check_on_site(xCellCoord_p,yCellCoord_p,siteSpacing,subrowOrigin);
+
+    //output file
+    clear_output_dir(outputPath);
+    write_aux_File(outputPath,benchmarkName);
+    writePlFile(outputPath,benchmarkName,xCellCoord_p.data(),yCellCoord_p.data());
+    write_other_File(benchmarkPath,outputPath,benchmarkName);
 
     freeHash();
     return 0;
