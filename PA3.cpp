@@ -1,32 +1,34 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <map>
+#include <cmath>
+#include <ctime>
+#include <vector> 
+#include <limits>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>        
 #include "bookshelf_IO.h"
 #include "memAlloc.h"
-#include <vector>
-#include <cmath>
-#include <iostream>
-#include <limits>
-#include <algorithm> // 用于 std::max 和 std::min
 
-// 定义一个简单的结构来表示 rect 的范围
 struct Rect {
     float xStart, xEnd;
     float yStart, yEnd;
-    int index; // 记录矩形的索引
+    int index; 
 };
 
-// 将值限制在最小值和最大值之间
+
 float clamp(float val, float minVal, float maxVal) {
     return std::max(minVal, std::min(maxVal, val));
 }
 
-// 比较函数，用于排序矩形
+
 bool compareRect(const Rect &a, const Rect &b) {
     if (a.yStart != b.yStart)
-        return a.yStart < b.yStart; // 先按照 y 坐标排序（从下到上）
+        return a.yStart < b.yStart; // sort y by up-down
     else
-        return a.xStart < b.xStart; // 若 y 相同，则按照 x 坐标排序（从左到右）
+        return a.xStart < b.xStart; // if y is same, I sort X by left-right
 }
 
 void check_overlap(std::vector<float> xCellCoord_p,std::vector<float> yCellCoord_p){
@@ -114,16 +116,157 @@ void check_on_site(std::vector<float> xCellCoord_p,std::vector<float> yCellCoord
 
 }
 
+
+bool checkOverlap(const std::vector<float> &xCellCoord_p, const std::vector<float> &yCellCoord_p, int numNodes) {
+    for (int i = 1; i <= numNodes; ++i) {
+        for (int j = i + 1; j <= numNodes; ++j) {
+            // 获取矩形 i 的范围
+            float xStart_i = xCellCoord_p[i];
+            float xEnd_i = xStart_i + cellWidth[i];
+            float yStart_i = yCellCoord_p[i];
+            float yEnd_i = yStart_i + cellHeight[i];
+
+            // 获取矩形 j 的范围
+            float xStart_j = xCellCoord_p[j];
+            float xEnd_j = xStart_j + cellWidth[j];
+            float yStart_j = yCellCoord_p[j];
+            float yEnd_j = yStart_j + cellHeight[j];
+
+            // 检查 X 轴上的重叠，边界相等不算重叠
+            bool xOverlap = xStart_i < xEnd_j && xEnd_i > xStart_j;
+            if (xEnd_i == xStart_j || xEnd_j == xStart_i) {
+                xOverlap = false;
+            }
+
+            // 检查 Y 轴上的重叠，边界相等不算重叠
+            bool yOverlap = yStart_i < yEnd_j && yEnd_i > yStart_j;
+            if (yEnd_i == yStart_j || yEnd_j == yStart_i) {
+                yOverlap = false;
+            }
+
+            if (xOverlap && yOverlap) {
+                return true; // 有重叠
+            }
+        }
+    }
+    return false; // 无重叠
+}
+
+
+void calculateDisplacement(const std::vector<float> &xCellCoord_p, const std::vector<float> &yCellCoord_p, int numNodes, float &total_cost) {
+    total_cost = 0.0f;
+    for (int i = 1; i <= numNodes; ++i) {
+        float ab_x = xCellCoord_p[i] - xCellCoord[i];
+        float ab_y = yCellCoord_p[i] - yCellCoord[i];
+        float cost = std::fabs(ab_x) + std::fabs(ab_y);
+        total_cost += cost;
+
+    }
+}
+
+
+
+void simulatedAnnealing(std::vector<float> &xCellCoord_p, std::vector<float> &yCellCoord_p,
+                        float *cellWidth, float *cellHeight,
+                        const std::vector<float> &siteSpacing, const std::vector<float> &subrowOrigin,
+                        int numNodes, int numRows, float siteOriginY, float coreRowHeight) {
+    // 参数设置
+    float T = 1024.0f; // intial T
+    float T_min = 1e-1f; // minimal T
+    float alpha = 0.997f; // coe
+    int maxIterations = 2048; // max iteration
+
+    // 构建宽度到cell索引的映射
+    std::map<float, std::vector<int>> widthToCells;
+    for (int i = 1; i <= numNodes; ++i) {
+        widthToCells[cellWidth[i]].push_back(i);
+    }
+
+    std::vector<float> currentX = xCellCoord_p;
+    std::vector<float> currentY = yCellCoord_p;
+
+
+    float currentTotalCost, currentMaxCost;
+    calculateDisplacement(currentX, currentY, numNodes, currentTotalCost);
+    float historyTotalCost=1e10;
+    std::srand(static_cast<unsigned int>(std::time(nullptr))); // random
+
+
+    //start SA
+    while (T > T_min) {
+        // std::cout<<"T:"<<T<<std::endl;
+        for (int iter = 0; iter < maxIterations; ++iter) {
+            
+            auto it = widthToCells.begin();
+            std::advance(it, std::rand() % widthToCells.size());
+            float width = it->first;
+            auto &cells = it->second;
+
+            if (cells.size() < 2) continue;
+
+            
+            int idx1 = cells[std::rand() % cells.size()];
+            int idx2 = cells[std::rand() % cells.size()];
+            float dist=std::fabs(currentX[idx1]-currentX[idx2])+std::fabs(currentY[idx1]-currentY[idx2]);
+            if (idx1 == idx2 || cellWidth[idx1]!=cellWidth[idx2]) continue;
+            // else if(dist>10000){
+            //     continue;
+            // }
+
+            
+            std::swap(currentX[idx1], currentX[idx2]);
+            std::swap(currentY[idx1], currentY[idx2]);
+
+            
+
+            // new cost
+            float newTotalCost;
+            calculateDisplacement(currentX, currentY, numNodes, newTotalCost);
+
+            if (newTotalCost < currentTotalCost) {
+                currentTotalCost = newTotalCost;
+            } else {
+                float delta = newTotalCost - currentTotalCost;
+                float probability = std::exp(-delta / T);
+                if ((std::rand() / (float)RAND_MAX) < probability) {
+
+                    currentTotalCost = newTotalCost;
+                    // printf("[BAD]Total displacement: %.1f\n",currentTotalCost);
+                } else {
+
+                    std::swap(currentX[idx1], currentX[idx2]);
+                    std::swap(currentY[idx1], currentY[idx2]);
+                }
+            }
+            if(currentTotalCost<historyTotalCost){
+                // printf("[GOOD]Total displacement: %.1f\n",currentTotalCost);
+                historyTotalCost=currentTotalCost;
+                xCellCoord_p = currentX;
+                yCellCoord_p = currentY;
+            }
+
+        }
+
+        // if(T <100.0){
+        //     T *= (alpha+0.20);
+        // }else{
+            T *= alpha;
+        // }
+        
+    }
+
+}
+
 int main (int argc, char *argv[])
 {
-    char auxFile[BUFFERSIZE], benchmarkPath[BUFFERSIZE], outputfile[BUFFERSIZE];
+    char auxFile[BUFFERSIZE], benchmarkPath[BUFFERSIZE], outputPath[BUFFERSIZE];
 
     if(argc != 4) {
         printf("Usage: %s <benchmark_dir> <aux_file> <placement_file>\n",
                argv[0]);
         printf("    <benchmark_dir> is the benchmark file directory.\n");
         printf("    <aux_file> is the bookshelf format auxiliary file");
-        printf(" (assume in <benchmark_dir>).\n");
+        printf("  (assume in <benchmark_dir>).\n");
         printf("    <placement_file> is the placement file");
         printf(" (assume in current directory).\n");
         exit(1);
@@ -131,7 +274,7 @@ int main (int argc, char *argv[])
 
     strcpy(benchmarkPath, argv[1]);
     strcpy(auxFile, argv[2]);
-    strcpy(outputfile, argv[3]);
+    strcpy(outputPath, argv[3]);
 
     readAuxFile(benchmarkPath, auxFile);
     createHash(benchmarkPath, nodesFile);
@@ -145,11 +288,11 @@ int main (int argc, char *argv[])
         Modified Tetris Legalization Algorithm
     -------------------------------------------------------------------------------- */
 
-    // 定义新的坐标向量
+    // define placed position (left down)
     std::vector<float> xCellCoord_p(numNodes + 1);
     std::vector<float> yCellCoord_p(numNodes + 1);
 
-    // 构建矩形列表
+    // construct rect
     std::vector<Rect> rects;
     for (int i = 1; i <= numNodes; ++i) {
         Rect rect;
@@ -161,26 +304,25 @@ int main (int argc, char *argv[])
         rects.push_back(rect);
     }
 
-    // 按照 y 坐标从下到上，x 坐标从左到右排序
+
     std::sort(rects.begin(), rects.end(), compareRect);
 
-    // 建立每个 row 的可用区间列表
+
     std::vector<std::vector<std::pair<float, float>>> availableIntervals(numRows);
-    // 存储每个 row 的 Sitespacing 和 SubrowOrigin
+    // store row of Sitespacing & SubrowOrigin
     std::vector<float> siteSpacing(numRows);
     std::vector<float> subrowOrigin(numRows);
     std::vector<int> numSites(numRows);
 
-    // 假设在 readSclFile() 中已经填充了 Sitespacing 和 SubrowOrigin
-    // 需要根据你的数据结构进行调整
+
     for (int row = 0; row < numRows; ++row) {
         availableIntervals[row].push_back({rowOriginX[row], rowEndX[row]});
-        siteSpacing[row] = siteSpacingRow[row+1]; // 假设 siteSpacingRow[row] 存储了每个 row 的 Sitespacing
-        subrowOrigin[row] = rowOriginX[row]; // SubrowOrigin 是 row 的起始 x 坐标
+        siteSpacing[row] = siteSpacingRow[row+1]; 
+        subrowOrigin[row] = rowOriginX[row]; // SubrowOrigin 是 row 的起始 x 座標
         numSites[row] = (int)((rowEndX[row] - rowOriginX[row]) / siteSpacing[row]);
     }
 
-    // 开始 Modified Tetris Legalization
+    // Modified Tetris Legalization
     for (auto &rect : rects) {
         float width = cellWidth[rect.index];
         float height = cellHeight[rect.index];
@@ -275,16 +417,7 @@ int main (int argc, char *argv[])
         }
     }
 
-    //SA演算法
-    
 
-
-
-    // 如果需要，将结果写入文件
-    write_python_File( xCellCoord_p.data(), yCellCoord_p.data());
-
-
-    //计算总共cost以及最大的cost
     float total_cost=0.0;
     float max_cost=0.0;
     for(int i=1;i<xCellCoord_p.size();i++){
@@ -296,13 +429,43 @@ int main (int argc, char *argv[])
             max_cost=cost;
         }
     }
-    printf("Total displacement: %.1f\n",total_cost);
-    printf("Maximum displacement: %.1f\n",max_cost);
+    printf("[before]Total displacement: %.1f\n",total_cost);
+    printf("[before]Maximum displacement: %.1f\n",max_cost);
 
-    // 检查是否有重叠的矩形
-    // check_overlap(xCellCoord_p,yCellCoord_p);
+    /* -----------------------------------------------------------------------------
+        simulated Annealing Algorithm 
+    -------------------------------------------------------------------------------- */
+    
+    simulatedAnnealing(xCellCoord_p, yCellCoord_p, cellWidth, cellHeight, siteSpacing, subrowOrigin,
+                       numNodes, numRows, siteOriginY, coreRowHeight);
+
+
+
+
+    // visualize result
+    write_python_File( xCellCoord_p.data(), yCellCoord_p.data());
+
+
+    //Total cost & MAX cost
+    total_cost=0.0;
+    max_cost=0.0;
+    for(int i=1;i<xCellCoord_p.size();i++){
+        float ab_x=xCellCoord_p[i]-xCellCoord[i];
+        float ab_y=yCellCoord_p[i]-yCellCoord[i];
+        float cost= std::fabs(ab_x)+std::fabs(ab_y);
+        total_cost+=cost;
+        if(max_cost<cost){
+            max_cost=cost;
+        }
+    }
+    printf("[after]Total displacement: %.1f\n",total_cost);
+    printf("[after]Maximum displacement: %.1f\n",max_cost);
+
+    // check_overlap
+    check_overlap(xCellCoord_p,yCellCoord_p);
     //檢查是否符合 site的座標
-    // check_on_site(xCellCoord_p,yCellCoord_p,siteSpacing,subrowOrigin);
+    check_on_site(xCellCoord_p,yCellCoord_p,siteSpacing,subrowOrigin);
+
     freeHash();
     return 0;
 }
