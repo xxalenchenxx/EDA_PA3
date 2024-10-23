@@ -1,7 +1,7 @@
 compile
     make clean && make
 run
-    ./.exe <input directory> <input file.aux> <output directory>
+    ./<exe> <input directory> <input file.aux> <output directory>
 
     example
         ./PA3 toy toy.aux output

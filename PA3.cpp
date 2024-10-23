@@ -12,6 +12,8 @@
 #include <algorithm>        
 #include "bookshelf_IO.h"
 
+double time_limit=1000.0;
+
 struct Rect {
     float xStart, xEnd;
     float yStart, yEnd;
@@ -170,15 +172,14 @@ void calculateDisplacement(const std::vector<float> &xCellCoord_p, const std::ve
 void simulatedAnnealing(std::vector<float> &xCellCoord_p, std::vector<float> &yCellCoord_p,
                         float *cellWidth, float *cellHeight,
                         const std::vector<float> &siteSpacing, const std::vector<float> &subrowOrigin,
-                        int numNodes, int numRows, float siteOriginY, float coreRowHeight) {
-    // 参数设置
+                        int numNodes, int numRows, float siteOriginY, float coreRowHeight,auto start) {
+
     float T = 1024.0f; // intial T
     float T_min = 1e-1f; // minimal T
-    float alpha = 0.997f; // coe
+    float alpha = 0.995f; // coe
     int maxIterations = 2048; // max iteration
-    double runtime_limit=10.0;
 
-    // 构建宽度到cell索引的映射
+
     std::map<float, std::vector<int>> widthToCells;
     for (int i = 1; i <= numNodes; ++i) {
         widthToCells[cellWidth[i]].push_back(i);
@@ -192,11 +193,10 @@ void simulatedAnnealing(std::vector<float> &xCellCoord_p, std::vector<float> &yC
     calculateDisplacement(currentX, currentY, numNodes, currentTotalCost);
     float historyTotalCost=currentTotalCost;
     std::srand(static_cast<unsigned int>(std::time(nullptr))); // random
-    auto start = std::chrono::high_resolution_clock::now();
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
     //start SA
-    while (T > T_min && elapsed.count() < runtime_limit) {
+    while (T > T_min && elapsed.count() < time_limit) {
         // std::cout<<"T:"<<T<<std::endl;
         // std::cout<<"end: "<<elapsed.count()<<std::endl;
         for (int iter = 0; iter < maxIterations; ++iter) {
@@ -276,7 +276,7 @@ int main (int argc, char *argv[])
         printf(" (assume in current directory).\n");
         exit(1);
     }    
-
+    auto start = std::chrono::high_resolution_clock::now();
     strcpy(benchmarkPath, argv[1]);
     strcpy(auxFile, argv[2]);
     strcpy(outputPath, argv[3]);
@@ -339,40 +339,39 @@ int main (int argc, char *argv[])
         float bestXStart = rect.xStart;
         float bestYStart = rect.yStart;
 
-        // 遍历所有 row，寻找最适合的位置
+        
         for (int row = 0; row < numRows; ++row) {
             float yStart = siteOriginY + row * coreRowHeight;
 
-            // 确保矩形高度不超过 row 的高度
             if (height > coreRowHeight) {
-                continue; // 无法放置在该 row
+                continue; 
             }
 
-            // 获取该 row 的 Sitespacing 和 SubrowOrigin
+            
             float spacing = siteSpacing[row]; //66
             float origin = subrowOrigin[row]; 
             int sites = numSites[row]; //66
 
-            // 在该 row 中遍历可用区间
+            
             auto &intervals = availableIntervals[row];
             for (auto it = intervals.begin(); it != intervals.end(); ++it) {
                 float intervalStart = it->first;
                 float intervalEnd = it->second;
 
-                // 计算区间内的起始和结束 site 索引
+                
                 int startSiteIndex = std::max(0, (int)std::ceil((intervalStart - origin) / spacing));
                 int endSiteIndex = std::min(sites, (int)((intervalEnd - origin) / spacing));
 
-                // 遍历该区间内的可能 site 位置
+                
                 for (int siteIndex = startSiteIndex; siteIndex < endSiteIndex; ++siteIndex) {
                     float xSite = origin + siteIndex * spacing;
 
-                    // 确保矩形能放入区间
-                    if (xSite + width >= intervalEnd ) { // 允许小的误差
+                    
+                    if (xSite + width >= intervalEnd ) { 
                         break; // 不能再放置更多 site
                     }
 
-                    // 计算与原始位置的距离
+                   
                     float distance = std::fabs(xSite - rect.xStart) + std::fabs(yStart - rect.yStart);
 
                     if (distance < minDistance) {
@@ -387,7 +386,7 @@ int main (int argc, char *argv[])
         }
 
         if (placed) {
-            // 更新最佳 row 的可用区间
+            
             float xPlacedStart = bestXStart;
             float xPlacedEnd = xPlacedStart + width;
 
@@ -396,10 +395,10 @@ int main (int argc, char *argv[])
 
             for (auto &interval : intervals) {
                 if (interval.second <= xPlacedStart || interval.first >= xPlacedEnd) {
-                    // 不重叠，保留
+                    
                     newIntervals.push_back(interval);
                 } else {
-                    // 可能需要拆分区间
+                    
                     if (interval.first < xPlacedStart) {
                         newIntervals.push_back({interval.first, xPlacedStart});
                     }
@@ -410,11 +409,11 @@ int main (int argc, char *argv[])
             }
             intervals = newIntervals;
 
-            // 记录新位置
+            
             xCellCoord_p[rect.index] = bestXStart;
             yCellCoord_p[rect.index] = bestYStart;
         } else {
-            // 无法放置，保持原始位置并输出警告
+            
             xCellCoord_p[rect.index] = rect.xStart;
             yCellCoord_p[rect.index] = rect.yStart;
             std::cout << "Warning: Rect " << cellName[rect.index] << " could not be placed." <<
@@ -441,14 +440,25 @@ int main (int argc, char *argv[])
         simulated Annealing Algorithm 
     -------------------------------------------------------------------------------- */
     
-    simulatedAnnealing(xCellCoord_p, yCellCoord_p, cellWidth, cellHeight, siteSpacing, subrowOrigin,
-                       numNodes, numRows, siteOriginY, coreRowHeight);
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    int first=0;
+    while(elapsed.count()<time_limit){
+        // printf("first: %d\n",first);
+        simulatedAnnealing(xCellCoord_p, yCellCoord_p, cellWidth, cellHeight, siteSpacing, subrowOrigin,
+                           numNodes, numRows, siteOriginY, coreRowHeight,start);
+
+        end = std::chrono::high_resolution_clock::now();
+        elapsed = end - start;
+        first++;
+    }
+    
 
 
 
 
-    // visualize result
-    write_python_File( xCellCoord_p.data(), yCellCoord_p.data());
+    // visualize result if needed
+    // write_python_File( xCellCoord_p.data(), yCellCoord_p.data());
 
 
     //Total cost & MAX cost
