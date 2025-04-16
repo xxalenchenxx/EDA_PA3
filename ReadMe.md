@@ -41,20 +41,19 @@ Each standard cell is converted into a rectangle structure containing x/y positi
 - Cells are sorted by descending size (width + height).
 - For each cell:
   - Traverse rows and find candidate intervals.
-  - If the row has fewer than 16 intervals, try all possible site positions.
+  - If the row has fewer than 15 intervals, try all possible site positions.
   - If the row has many intervals, evaluate only the left and right ends of each interval.
   - Select the legal location with minimum Manhattan distance to original position.
 
 ### 4. Simulated Annealing (SA)
 - Refines the placement result from the Tetris step.
 - Randomly selects cells with the same width and attempts to swap their positions.
-- After swap, applies a local horizontal sliding search (Tetris-style) to reduce displacement.
 - Accepts or rejects changes based on SA criteria (energy difference and temperature).
 
 ### 5. Cost Calculation
 For cell \( i \):
 
-\[ d_i = |x_i^{gp} - x_i^{legal}| + |y_i^{gp} - y_i^{legal}| \]
+\( d_i = |x_i^{gp} - x_i^{legal}| + |y_i^{gp} - y_i^{legal}| \)
 
 - **Total Displacement**: \( D_{total} = \sum_{i} d_i \)
 - **Maximum Displacement**: \( D_{max} = \max_{i}(d_i) \)
@@ -92,14 +91,6 @@ The program outputs `output.pl` and reports cost metrics.
 
 Below is the result of global placement for the benchmark `ibm01`:
 <img src="./pic/ibm01_result.png" alt="Legalized Result - ibm01" width="50%"/>
-Total displacement: 54401380.0  
-Maximum displacement: 34353.6  
-
-## Output
-
-- `output.pl`: Legalized placement file
-- Console report:
-
 ```text
 Total displacement: 52839296.0  
 Maximum displacement: 31840.0  
