@@ -162,6 +162,7 @@ void createHash(char benchmarkPath[], char nodesFile[])
 
             // create array to save cell name
             strcpy(cellName[pin_ptr], temp);
+            
             // printf("temp: %s\n",temp);
             // create a hash table for name searching
             hashfunc = 0;
@@ -222,7 +223,7 @@ void createHash(char benchmarkPath[], char nodesFile[])
     // printf("Cell Names:\n");
     // for (long i = 1; i <= numNodes; i++) {
     //     printf("Row %ld: ", i);
-    //     printf("%s", cellName[i]);
+    //     printf("%s", cellName[1]);
         
     //     printf("\n");
     // }
@@ -537,20 +538,19 @@ void readPlFile(char benchmarkPath[], char plFile[])
 {
     FILE *fp;
     long nodeIndex, currentPos, j, hashfunc, RN_index, nodeNo, movable;
-    char tempStr[BUFFERSIZE], nodeName[BUFFERSIZE], fixedType[BUFFERSIZE];
+    char tempStr[BUFFERSIZE], nodeName[BUFFERSIZE], fixedType[STRINGLEN]; // 使用 STRINGLEN 初始化 fixedType
     float xCoord, yCoord;
 
-  
     strcpy(tempStr, benchmarkPath);
     strcat(tempStr, "/");
     strcat(tempStr, plFile);
 
-    if((fp=fopen(tempStr, "r"))==NULL) {
+    if((fp = fopen(tempStr, "r")) == NULL) {
         printf("Error in opening %s file \n", tempStr);
         exit(1);
     }
     printf("Reading %s\n", tempStr);
-  
+
     // Reading first four lines 
     fgets(tempStr, BUFFERSIZE, fp);
     do {
@@ -558,54 +558,50 @@ void readPlFile(char benchmarkPath[], char plFile[])
         fgets(tempStr, BUFFERSIZE, fp);
     } while( (tempStr[0] == '#') || (strlen(tempStr) < 5) );  
     fseek(fp, currentPos, SEEK_SET);
-  
-    xCellCoord = vector(1,numNodes);
-    yCellCoord = vector(1,numNodes);
-    cell_fixedType = cmatrix(1, numNodes, 1, 2);//N, S, E, W, FN, FS, FE, FW: 最多長度為2
+
+    xCellCoord = vector(1, numNodes);
+    yCellCoord = vector(1, numNodes);
+    cell_fixedType = cmatrix(1, numNodes, 1, STRINGLEN); // 修改：將固定的列數改為 STRINGLEN 來儲存字符串
     areaArrayIO = ivector(1, numTerminals);
     numAreaArrayIO = 0;
 
-    movable = numNodes-numTerminals;
-    for(nodeNo=1; nodeNo<=numNodes; nodeNo++) {
+    movable = numNodes - numTerminals;
+    for(nodeNo = 1; nodeNo <= numNodes; nodeNo++) {
 
         fgets(tempStr, BUFFERSIZE, fp);
-        strcpy(fixedType, "");
-        sscanf(tempStr, "%s%f%f\t:\t%s\n", nodeName, &xCoord, &yCoord, fixedType);
-        // printf("fixedType:%s\n",fixedType);
+        strcpy(fixedType, ""); // 每次迭代前重置 fixedType，防止覆蓋
+        sscanf(tempStr, "%s %f %f : %s\n", nodeName, &xCoord, &yCoord, fixedType);
+        // if(nodeNo<10){
+        //     printf("%s\n",tempStr);
+        // }
         hashfunc = 0;
-        for(j=1;j<=IMIN(strlen(nodeName), modresNum);j++)
-            hashfunc += ((long)nodeName[j-1]<<3*(j-1))%hashSize;
-      
-        hashfunc = hashfunc%hashSize;
+        for(j = 1; j <= IMIN(strlen(nodeName), modresNum); j++)
+            hashfunc += ((long)nodeName[j - 1] << 3 * (j - 1)) % hashSize;
+
+        hashfunc = hashfunc % hashSize;
         RN_index = 1;
-    
-        while(strcmp(nodeName, NodesInfo[hashfunc].name)!=0 && RN_index<hashSize) {
-            hashfunc = (hashfunc+RN[RN_index])%hashSize;
+
+        while(strcmp(nodeName, NodesInfo[hashfunc].name) != 0 && RN_index < hashSize) {
+            hashfunc = (hashfunc + RN[RN_index]) % hashSize;
             RN_index++;
         }
-      
-        if (RN_index>=hashSize) {  
+
+        if (RN_index >= hashSize) {  
             printf("cannot find in hash table\n");
             exit(1);
         }
-      
+
         nodeIndex = NodesInfo[hashfunc].index;
-        xCellCoord[nodeIndex] = xCoord ; //+ 0.5*cellWidth[nodeIndex]
-        yCellCoord[nodeIndex] = yCoord ;//+ 0.5*cellHeight[nodeIndex]
-        strcpy(cell_fixedType[nodeIndex],fixedType);
-/*        
-        if(nodeIndex > movable) {
-            // Is a fixed terminal but can allow overlap with it
-            if(strcmp(fixedType, "/FIXED") != 0) {
-                numAreaArrayIO++;
-                areaArrayIO[numAreaArrayIO] = nodeIndex;
-            }
-        }
-*/
+        xCellCoord[nodeIndex] = xCoord;  // + 0.5*cellWidth[nodeIndex]
+        yCellCoord[nodeIndex] = yCoord;  // + 0.5*cellHeight[nodeIndex]
+        
+        // 將字符串正確地複製到矩陣中，確保不會覆蓋
+        strcpy(cell_fixedType[nodeIndex], fixedType);
     }
 
     fclose(fp);
-}    
+}
+    
 
 
 /* -----------------------------------------------------------
@@ -734,7 +730,8 @@ void writePlFile(char outputDir[], char benchmarkName[], float xCoord[], float y
     FILE *fp;
     char tempStr[BUFFERSIZE];
     int i;
-
+    int nonpin_ptr_out = 1;                      // movable nodes start from 1
+    int pin_ptr_out = numNodes-numTerminals+1;   // fixed nodes start from movableNodes+1
 
     strcpy(tempStr, outputDir);
     strcat(tempStr, "/");
@@ -750,10 +747,14 @@ void writePlFile(char outputDir[], char benchmarkName[], float xCoord[], float y
 
     fprintf(fp, "UCLA pl 1.0\n\n");
 
-    for(i=1; i<=numNodes; i++)
+    for(i=numNodes-numTerminals+1; i<=numNodes; i++)
         fprintf(fp, "%s %0.2f %0.2f : %s\n", 
                 cellName[i], xCoord[i], yCoord[i],cell_fixedType[i]);
    
+    for(i=1; i<=numNodes-numTerminals; i++)
+        fprintf(fp, "%s %0.2f %0.2f : %s\n", 
+                cellName[i], xCoord[i], yCoord[i],cell_fixedType[i]);
+
     fclose(fp);
 }
 

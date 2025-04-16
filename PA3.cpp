@@ -12,7 +12,7 @@
 #include <algorithm>        
 #include "bookshelf_IO.h"
 
-double time_limit=1000.0;
+double time_limit=120.0; //set limit time of SA tiime
 
 struct Rect {
     float xStart, xEnd;
@@ -28,36 +28,35 @@ float clamp(float val, float minVal, float maxVal) {
 
 
 bool compareRect(const Rect &a, const Rect &b) {
-    if (a.yStart != b.yStart)
-        return a.yStart < b.yStart; // sort y by up-down
-    else
-        return a.xStart < b.xStart; // if y is same, I sort X by left-right
+    float sumA = (a.xEnd - a.xStart) + (a.yEnd - a.yStart);
+    float sumB = (b.xEnd - b.xStart) + (b.yEnd - b.yStart);
+    return sumA > sumB;
 }
 
 void check_overlap(std::vector<float> xCellCoord_p,std::vector<float> yCellCoord_p){
-    // 检查是否有重叠的矩形
+    
     bool hasOverlap = false;
     for (int i = 1; i <= numNodes; ++i) {
         for (int j = i + 1; j <= numNodes; ++j) {
-            // 获取矩形 i 的范围
+            
             float xStart_i = xCellCoord_p[i];
             float xEnd_i = xStart_i + cellWidth[i];
             float yStart_i = yCellCoord_p[i];
             float yEnd_i = yStart_i + cellHeight[i];
 
-            // 获取矩形 j 的范围
+            
             float xStart_j = xCellCoord_p[j];
             float xEnd_j = xStart_j + cellWidth[j];
             float yStart_j = yCellCoord_p[j];
             float yEnd_j = yStart_j + cellHeight[j];
 
-            // 检查 X 轴上的重叠，边界相等不算重叠
+            
             bool xOverlap = xStart_i < xEnd_j && xEnd_i > xStart_j;
             if (xEnd_i == xStart_j || xEnd_j == xStart_i) {
                 xOverlap = false;
             }
 
-            // 检查 Y 轴上的重叠，边界相等不算重叠
+           
             bool yOverlap = yStart_i < yEnd_j && yEnd_i > yStart_j;
             if (yEnd_i == yStart_j || yEnd_j == yStart_i) {
                 yOverlap = false;
@@ -65,8 +64,8 @@ void check_overlap(std::vector<float> xCellCoord_p,std::vector<float> yCellCoord
 
             if (xOverlap && yOverlap) {
                 hasOverlap = true;
-                // std::cout << "Overlap detected between Rect " << cellName[i] <<" ("<<xStart_i<<" , "<<yStart_i<< " ) and Rect " 
-                //           << cellName[j] <<" ("<<xStart_j<<" , "<<yStart_j<< " )" << std::endl;
+                std::cout << "Overlap detected between Rect " << cellName[i] <<" ("<<xStart_i<<" , "<<yStart_i<< " ) and Rect " 
+                          << cellName[j] <<" ("<<xStart_j<<" , "<<yStart_j<< " )" << std::endl;
             }
         }
     }
@@ -87,7 +86,7 @@ void check_on_site(std::vector<float> xCellCoord_p,std::vector<float> yCellCoord
 
         // 確定 cell 所在的 row
         int row = static_cast<int>((yStart_i - siteOriginY) / coreRowHeight);
-        // 檢查 row 索引是否合法
+        // 檢查 row 是否合法
         if (row < 0 || row >= numRows) {
             std::cout << "Error: Cell " << i << " is in invalid row." << std::endl;
             has_non_site = true;
@@ -123,56 +122,59 @@ void check_on_site(std::vector<float> xCellCoord_p,std::vector<float> yCellCoord
 bool checkOverlap(const std::vector<float> &xCellCoord_p, const std::vector<float> &yCellCoord_p, int numNodes) {
     for (int i = 1; i <= numNodes; ++i) {
         for (int j = i + 1; j <= numNodes; ++j) {
-            // 获取矩形 i 的范围
+            
             float xStart_i = xCellCoord_p[i];
             float xEnd_i = xStart_i + cellWidth[i];
             float yStart_i = yCellCoord_p[i];
             float yEnd_i = yStart_i + cellHeight[i];
 
-            // 获取矩形 j 的范围
+            
             float xStart_j = xCellCoord_p[j];
             float xEnd_j = xStart_j + cellWidth[j];
             float yStart_j = yCellCoord_p[j];
             float yEnd_j = yStart_j + cellHeight[j];
 
-            // 检查 X 轴上的重叠，边界相等不算重叠
+            
             bool xOverlap = xStart_i < xEnd_j && xEnd_i > xStart_j;
             if (xEnd_i == xStart_j || xEnd_j == xStart_i) {
                 xOverlap = false;
             }
 
-            // 检查 Y 轴上的重叠，边界相等不算重叠
+            
             bool yOverlap = yStart_i < yEnd_j && yEnd_i > yStart_j;
             if (yEnd_i == yStart_j || yEnd_j == yStart_i) {
                 yOverlap = false;
             }
 
             if (xOverlap && yOverlap) {
-                return true; // 有重叠
+                return true; 
             }
         }
     }
-    return false; // 无重叠
+    return false; 
 }
 
 
 void calculateDisplacement(const std::vector<float> &xCellCoord_p, const std::vector<float> &yCellCoord_p, int numNodes, float &total_cost) {
     total_cost = 0.0f;
+    float max_cost = 0.0f;
     for (int i = 1; i <= numNodes; ++i) {
         float ab_x = xCellCoord_p[i] - xCellCoord[i];
         float ab_y = yCellCoord_p[i] - yCellCoord[i];
         float cost = std::fabs(ab_x) + std::fabs(ab_y);
         total_cost += cost;
-
+        if(cost>max_cost){
+            max_cost=cost;
+        }
     }
+    total_cost+=max_cost;
 }
 
 
-
 void simulatedAnnealing(std::vector<float> &xCellCoord_p, std::vector<float> &yCellCoord_p,
-                        float *cellWidth, float *cellHeight,
-                        const std::vector<float> &siteSpacing, const std::vector<float> &subrowOrigin,
-                        int numNodes, int numRows, float siteOriginY, float coreRowHeight,auto start) {
+    float *cellWidth, float *cellHeight,
+    const std::vector<float> &siteSpacing, const std::vector<float> &subrowOrigin,
+    int numNodes, int numRows, float siteOriginY, float coreRowHeight,auto start) {
 
     float T = 1024.0f; // intial T
     float T_min = 1e-1f; // minimal T
@@ -197,10 +199,10 @@ void simulatedAnnealing(std::vector<float> &xCellCoord_p, std::vector<float> &yC
     std::chrono::duration<double> elapsed = end - start;
     //start SA
     while (T > T_min && elapsed.count() < time_limit) {
-        // std::cout<<"T:"<<T<<std::endl;
-        // std::cout<<"end: "<<elapsed.count()<<std::endl;
+    // std::cout<<"T:"<<T<<std::endl;
+    // std::cout<<"end: "<<elapsed.count()<<std::endl;
         for (int iter = 0; iter < maxIterations; ++iter) {
-            
+
             auto it = widthToCells.begin();
             std::advance(it, std::rand() % widthToCells.size());
             float width = it->first;
@@ -208,7 +210,7 @@ void simulatedAnnealing(std::vector<float> &xCellCoord_p, std::vector<float> &yC
 
             if (cells.size() < 2) continue;
 
-            
+
             int idx1 = cells[std::rand() % cells.size()];
             int idx2 = cells[std::rand() % cells.size()];
             float dist=std::fabs(currentX[idx1]-currentX[idx2])+std::fabs(currentY[idx1]-currentY[idx2]);
@@ -217,11 +219,9 @@ void simulatedAnnealing(std::vector<float> &xCellCoord_p, std::vector<float> &yC
             //     continue;
             // }
 
-            
+
             std::swap(currentX[idx1], currentX[idx2]);
             std::swap(currentY[idx1], currentY[idx2]);
-
-            
 
             // new cost
             float newTotalCost;
@@ -235,9 +235,8 @@ void simulatedAnnealing(std::vector<float> &xCellCoord_p, std::vector<float> &yC
                 if ((std::rand() / (float)RAND_MAX) < probability) {
 
                     currentTotalCost = newTotalCost;
-                    // printf("[BAD]Total displacement: %.1f\n",currentTotalCost);
+                // printf("[BAD]Total displacement: %.1f\n",currentTotalCost);
                 } else {
-
                     std::swap(currentX[idx1], currentX[idx2]);
                     std::swap(currentY[idx1], currentY[idx2]);
                 }
@@ -254,13 +253,15 @@ void simulatedAnnealing(std::vector<float> &xCellCoord_p, std::vector<float> &yC
         // if(T <100.0){
         //     T *= (alpha+0.20);
         // }else{
-            T *= alpha;
+        T *= alpha;
         // }
         end = std::chrono::high_resolution_clock::now();
         elapsed = end - start;
     }
 
 }
+
+
 
 int main (int argc, char *argv[])
 {
@@ -288,7 +289,6 @@ int main (int argc, char *argv[])
     readNetsFile(benchmarkPath, netsFile);
     readPlFile(benchmarkPath, plFile);
     readSclFile(benchmarkPath, sclFile);
-
     /* -----------------------------------------------------------------------------
         Modified Tetris Legalization Algorithm
     -------------------------------------------------------------------------------- */
@@ -307,13 +307,19 @@ int main (int argc, char *argv[])
         rect.yEnd = rect.yStart + cellHeight[i];
         rect.index = i;
         rects.push_back(rect);
+        // if(i<10)
+        //     printf("%s\t%f\t%f\n",cellName[i],xCellCoord[i],yCellCoord[i]);
     }
-
+    // write_python_File( xCellCoord, yCellCoord);
 
     std::sort(rects.begin(), rects.end(), compareRect);
 
+    // for(auto &a:rects){
+    //     printf("a.x: %f a.y: %f\n",a.xStart,a.yStart);
+    // }
 
     std::vector<std::vector<std::pair<float, float>>> availableIntervals(numRows);
+    std::vector<std::vector<std::pair<float, float>>> availableIntervals_base(numRows);
     // store row of Sitespacing & SubrowOrigin
     std::vector<float> siteSpacing(numRows);
     std::vector<float> subrowOrigin(numRows);
@@ -326,79 +332,111 @@ int main (int argc, char *argv[])
         subrowOrigin[row] = rowOriginX[row]; // SubrowOrigin 是 row 的起始 x 座標
         numSites[row] = (int)((rowEndX[row] - rowOriginX[row]) / siteSpacing[row]);
     }
-
+    availableIntervals_base=availableIntervals;
+    bool base_flag=false;
     // Modified Tetris Legalization
     for (auto &rect : rects) {
+        // 假設已在迴圈中取得目前 cell 的寬度與高度：
         float width = cellWidth[rect.index];
         float height = cellHeight[rect.index];
 
-        // 存储最佳位置信息
         bool placed = false;
         float minDistance = std::numeric_limits<float>::max();
         int bestRow = -1;
         float bestXStart = rect.xStart;
         float bestYStart = rect.yStart;
 
-        
         for (int row = 0; row < numRows; ++row) {
             float yStart = siteOriginY + row * coreRowHeight;
 
+            // 若 cell 太高無法放入此 row 則跳過
             if (height > coreRowHeight) {
-                continue; 
+                continue;
             }
 
-            
-            float spacing = siteSpacing[row]; //66
-            float origin = subrowOrigin[row]; 
-            int sites = numSites[row]; //66
+            float spacing = siteSpacing[row];
+            float origin = subrowOrigin[row]; // 該 row 的起始 x 座標
+            int sites = numSites[row];         // 該 row 可用的站點數量
 
-            
             auto &intervals = availableIntervals[row];
-            for (auto it = intervals.begin(); it != intervals.end(); ++it) {
-                float intervalStart = it->first;
-                float intervalEnd = it->second;
 
-                
-                int startSiteIndex = std::max(0, (int)std::ceil((intervalStart - origin) / spacing));
-                int endSiteIndex = std::min(sites, (int)((intervalEnd - origin) / spacing));
+            // 若該 row 只有15個可用區段：使用原本逐站點掃描搜尋最佳候選位置
+            if (intervals.size() < 15) {
+                for (auto it = intervals.begin(); it != intervals.end(); ++it) {
+                    float intervalStart = it->first;
+                    float intervalEnd = it->second;
 
-                
-                for (int siteIndex = startSiteIndex; siteIndex < endSiteIndex; ++siteIndex) {
-                    float xSite = origin + siteIndex * spacing;
+                    int startSiteIndex = std::max(0, (int)std::ceil((intervalStart - origin) / spacing));
+                    int endSiteIndex = std::min(sites, (int)((intervalEnd - origin) / spacing));
 
-                    
-                    if (xSite + width >= intervalEnd ) { 
-                        break; // 不能再放置更多 site
+                    for (int siteIndex = startSiteIndex; siteIndex < endSiteIndex; ++siteIndex) {
+                        float xSite = origin + siteIndex * spacing;
+                        // 若該候選位置放置 cell 超出該間隔則中斷
+                        if (xSite + width >= intervalEnd) {
+                            break;
+                        }
+                        float distance = std::fabs(xSite - rect.xStart) + std::fabs(yStart - rect.yStart);
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            bestXStart = xSite;
+                            bestYStart = yStart;
+                            bestRow = row;
+                            placed = true;
+                        }
+                    }
+                }
+            }
+            // 若該 row 有多個區段：每個區段只評估最左側與最右側候選位置
+            else {
+                for (auto it = intervals.begin(); it != intervals.end(); ++it) {
+                    float intervalStart = it->first;
+                    float intervalEnd = it->second;
+
+                    int startSiteIndex = std::max(0, (int)std::ceil((intervalStart - origin) / spacing));
+                    int endSiteIndex = std::min(sites, (int)((intervalEnd - origin) / spacing));
+
+                    // 評估左邊界候選位置
+                    float candidateLeft = origin + startSiteIndex * spacing;
+                    if (candidateLeft + width < intervalEnd) {
+                        float distance = std::fabs(candidateLeft - rect.xStart) + std::fabs(yStart - rect.yStart);
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            bestXStart = candidateLeft;
+                            bestYStart = yStart;
+                            bestRow = row;
+                            placed = true;
+                        }
                     }
 
-                   
-                    float distance = std::fabs(xSite - rect.xStart) + std::fabs(yStart - rect.yStart);
-
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        bestXStart = xSite;
-                        bestYStart = yStart;
-                        bestRow = row;
-                        placed = true;
+                    // 評估右邊界候選位置 (注意：endSiteIndex 為區段中不包含的上界，故使用 endSiteIndex - 1)
+                    if (endSiteIndex > startSiteIndex) {
+                        float candidateRight = origin + (endSiteIndex - 1) * spacing;
+                        if (candidateRight + width < intervalEnd) {
+                            float distance = std::fabs(candidateRight - rect.xStart) + std::fabs(yStart - rect.yStart);
+                            if (distance < minDistance) {
+                                minDistance = distance;
+                                bestXStart = candidateRight;
+                                bestYStart = yStart;
+                                bestRow = row;
+                                placed = true;
+                            }
+                        }
                     }
                 }
             }
         }
 
         if (placed) {
-            
+            // 已找到合適位置，更新該 row 的可用區間
             float xPlacedStart = bestXStart;
             float xPlacedEnd = xPlacedStart + width;
 
             auto &intervals = availableIntervals[bestRow];
             std::vector<std::pair<float, float>> newIntervals;
-
             for (auto &interval : intervals) {
                 if (interval.second <= xPlacedStart || interval.first >= xPlacedEnd) {
-                    
                     newIntervals.push_back(interval);
                 } else {
-                    
                     if (interval.first < xPlacedStart) {
                         newIntervals.push_back({interval.first, xPlacedStart});
                     }
@@ -409,16 +447,21 @@ int main (int argc, char *argv[])
             }
             intervals = newIntervals;
 
-            
             xCellCoord_p[rect.index] = bestXStart;
             yCellCoord_p[rect.index] = bestYStart;
         } else {
-            
+            // 若無法找到合法位置，則保持原位並發出警告訊息
             xCellCoord_p[rect.index] = rect.xStart;
             yCellCoord_p[rect.index] = rect.yStart;
-            std::cout << "Warning: Rect " << cellName[rect.index] << " could not be placed." <<
-                " ("<<xCellCoord_p[rect.index]<<" , "<<yCellCoord_p[rect.index]<< " )"<< std::endl;
+            std::cout << "Warning: Rect " << cellName[rect.index] 
+                      << " could not be placed. (" 
+                      << xCellCoord_p[rect.index] << " , " 
+                      << yCellCoord_p[rect.index] << " )" 
+                      << std::endl;
+            base_flag = true;
+            break;
         }
+
     }
 
 
@@ -439,18 +482,93 @@ int main (int argc, char *argv[])
     /* -----------------------------------------------------------------------------
         simulated Annealing Algorithm 
     -------------------------------------------------------------------------------- */
-    
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = end - start;
-    int first=0;
-    while(elapsed.count()<time_limit){
-        // printf("first: %d\n",first);
-        simulatedAnnealing(xCellCoord_p, yCellCoord_p, cellWidth, cellHeight, siteSpacing, subrowOrigin,
-                           numNodes, numRows, siteOriginY, coreRowHeight,start);
+    if(base_flag){
+        // 再次嘗試放置未放置的矩形，逐行進行緊密排列
+       // 對於每一個矩形，根據 compareRect 的順序重新從下到上、從左到右進行排放
+       printf("do base case\n");
+        for (auto &rect : rects) {
+            for (int row = 0; row < numRows; ++row) {
+                float yStart = siteOriginY + row * coreRowHeight;
 
-        end = std::chrono::high_resolution_clock::now();
-        elapsed = end - start;
-        first++;
+                // 如果矩形的高度超過當前 row 的高度，則跳過
+                // if ((rect.yEnd - rect.yStart) > coreRowHeight) {
+                //     continue;
+                // }
+
+                // 計算該行的間隔參數
+                float spacing = siteSpacing[row];
+                float origin = subrowOrigin[row];
+                int sites = numSites[row];
+                auto &intervals = availableIntervals_base[row];
+
+                // 嘗試在當前行的可用間隔中找到合適的區域來放置矩形
+                for (auto it = intervals.begin(); it != intervals.end(); ++it) {
+                    float intervalStart = it->first;
+                    float intervalEnd = it->second;
+
+                    // 計算可以開始放置的位置的索引
+                    int startSiteIndex = std::max(0, (int)std::ceil((intervalStart - origin) / spacing));
+                    int endSiteIndex = std::min(sites, (int)((intervalEnd - origin) / spacing));
+
+                    // 在當前可用的 site 中進行檢查
+                    for (int siteIndex = startSiteIndex; siteIndex < endSiteIndex; ++siteIndex) {
+                        float xSite = origin + siteIndex * spacing;
+
+                        // 確保矩形可以完整地放置在這個區間內
+                        if (xSite + (rect.xEnd - rect.xStart) > intervalEnd) {
+                            break; // 無法在該區間放置該矩形
+                        }
+
+                        // 記錄最佳放置位置
+                        float xPlacedStart = xSite;
+                        float xPlacedEnd = xPlacedStart + (rect.xEnd - rect.xStart);
+
+                        // 更新 availableIntervals，移除已經放置的位置
+                        std::vector<std::pair<float, float>> newIntervals;
+                        for (auto &interval : intervals) {
+                            if (interval.second <= xPlacedStart || interval.first >= xPlacedEnd) {
+                                // 如果區間在放置位置的左邊或右邊，則保留
+                                newIntervals.push_back(interval);
+                            } else {
+                                // 如果區間被部分覆蓋，則進行劃分
+                                if (interval.first < xPlacedStart) {
+                                    newIntervals.push_back({interval.first, xPlacedStart});
+                                }
+                                if (interval.second > xPlacedEnd) {
+                                    newIntervals.push_back({xPlacedEnd, interval.second});
+                                }
+                            }
+                        }
+                        intervals = newIntervals;
+
+                        // 更新矩形的放置位置
+                        xCellCoord_p[rect.index] = xPlacedStart;
+                        yCellCoord_p[rect.index] = yStart;
+
+                        // 矩形已經成功放置，跳出當前矩形的處理
+                        goto next_rect;
+                    }
+                }
+            }
+
+            // 如果矩形未能被放置，給出警告訊息
+            std::cout << "Warning: Rect " << cellName[rect.index] << " could not be placed after reordering."
+                      << " (" << rect.xStart << ", " << rect.yStart << ")" << std::endl;
+
+        next_rect:;
+        }
+    
+    }else{
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = end - start;
+        while(elapsed.count()<time_limit){
+            // printf("first: %d\n",first);
+            simulatedAnnealing(xCellCoord_p, yCellCoord_p, cellWidth, cellHeight, siteSpacing, subrowOrigin,
+                               numNodes, numRows, siteOriginY, coreRowHeight,start);
+
+            end = std::chrono::high_resolution_clock::now();
+            elapsed = end - start;
+        }
     }
     
 
