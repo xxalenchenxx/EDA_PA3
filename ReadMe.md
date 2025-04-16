@@ -1,5 +1,10 @@
 # Standard Cell Placement Legalization
 
+
+## Problem Context
+
+In digital integrated circuit (IC) design, placement legalization is a critical step after global placement and before detailed placement and routing. It ensures that all standard cells are placed in legal, aligned positions on the chip grid without any overlap. A good legalization can reduce wirelength, improve routability, and enhance circuit performance.  
+
 ## Objective
 
 This project implements a standard cell placement legalization algorithm. The goal is to transform an initial global placement result (which may contain overlapping standard cells) into a legal, overlap-free placement that satisfies all site constraints. The program aims to minimize two key metrics:
@@ -7,9 +12,6 @@ This project implements a standard cell placement legalization algorithm. The go
 - **Total Displacement**: The sum of Manhattan distances between original and legalized positions for all cells.
 - **Maximum Displacement**: The maximum individual displacement among all cells.
 
-## Problem Context
-
-In digital integrated circuit (IC) design, placement legalization is a critical step after global placement and before detailed placement and routing. It ensures that all standard cells are placed in legal, aligned positions on the chip grid without any overlap. A good legalization can reduce wirelength, improve routability, and enhance circuit performance.
 
 ## Input Format
 
@@ -86,11 +88,11 @@ make clean && make
 #### Example Visualization
 
 Below is the original global placement for the benchmark `ibm01`:
-<img src="./pic/ibm01_ori.png" alt="Original Placement - ibm01" width="50%"/>
+<img src="./pic/ibm01_ori.png" alt="Original Placement - ibm01" width="50%"/>  
 The program outputs `output.pl` and reports cost metrics.
 
 Below is the result of global placement for the benchmark `ibm01`:
-<img src="./pic/ibm01_result.png" alt="Legalized Result - ibm01" width="50%"/>
+<img src="./pic/ibm01_result.png" alt="Legalized Result - ibm01" width="50%"/>  
 ```text
 Total displacement: 52839296.0  
 Maximum displacement: 31840.0  
