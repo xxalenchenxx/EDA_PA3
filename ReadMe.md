@@ -88,11 +88,11 @@ make clean && make
 #### Example Visualization
 
 Below is the original global placement for the benchmark `ibm01`:
-<img src="./pic/ibm01_ori.png" alt="Original Placement - ibm01" width="50%"/>  
+<img src="./pic/ibm01_ori.png" alt="Original Placement - ibm01" width="50%"/><br/>
 The program outputs `output.pl` and reports cost metrics.
 
 Below is the result of global placement for the benchmark `ibm01`:
-<img src="./pic/ibm01_result.png" alt="Legalized Result - ibm01" width="50%"/>  
+<img src="./pic/ibm01_result.png" alt="Legalized Result - ibm01" width="50%"/><br/>  
 ```text
 Total displacement: 52839296.0  
 Maximum displacement: 31840.0  
