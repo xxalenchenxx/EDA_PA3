@@ -52,13 +52,30 @@ Each standard cell is converted into a rectangle structure containing x/y positi
 - Randomly selects cells with the same width and attempts to swap their positions.
 - Accepts or rejects changes based on SA criteria (energy difference and temperature).
 
-### 5. Cost Calculation
+## 5. Cost Calculation
+
 For cell \( i \):
 
-\( d_i = |x_i^{gp} - x_i^{legal}| + |y_i^{gp} - y_i^{legal}| \)
+<div align="left">
 
-- **Total Displacement**: \( D_{total} = \sum_{i} d_i \)
-- **Maximum Displacement**: \( D_{max} = \max_{i}(d_i) \)
+$$
+d_i = |x_i^{gp} - x_i^{legal}| + |y_i^{gp} - y_i^{legal}|
+$$
+
+- **Total Displacement**:
+
+$$
+D_{total} = \sum_{i} d_i
+$$
+
+- **Maximum Displacement**:
+
+$$
+D_{max} = \max_{i}(d_i)
+$$
+
+</div>
+
 
 ## Techniques Used
 
